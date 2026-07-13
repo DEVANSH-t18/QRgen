@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const dns = require('dns');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const User = require('../models/User');
@@ -15,6 +16,9 @@ const createTransporter = () => {
     },
     tls: {
       rejectUnauthorized: false
+    },
+    lookup: (hostname, options, callback) => {
+      dns.lookup(hostname, { family: 4 }, callback);
     },
     connectionTimeout: 10000, // 10 seconds
     greetingTimeout: 10000,
