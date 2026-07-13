@@ -95,8 +95,8 @@ router.post('/send-otp', async (req, res) => {
     }
 
     return res.status(200).json({ 
-      message: 'OTP verification code generated and sent.', 
-      devOtp: (isProd || (!process.env.EMAIL_USER || !process.env.EMAIL_PASS)) ? undefined : otp
+      message: 'OTP verification code generated. (Demo Mode: code displayed below)', 
+      devOtp: otp
     });
 
   } catch (error) {
