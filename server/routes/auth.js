@@ -11,7 +11,10 @@ const createTransporter = () => {
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
-    }
+    },
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,
+    socketTimeout: 10000
   });
 };
 
@@ -42,43 +45,38 @@ router.post('/send-otp', async (req, res) => {
     // Log the OTP for easy local debugging if email is not configured
     console.log(`[AUTH] Generated OTP for ${email}: ${otp}`);
 
-    // Try sending email via Gmail SMTP
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-      try {
-        const transporter = createTransporter();
-        const mailOptions = {
-          from: `"QRGen Visiting Cards" <${process.env.EMAIL_USER}>`,
-          to: email,
-          subject: 'Your QRGen Authentication OTP Code',
-          text: `Your OTP code is ${otp}. It will expire in 5 minutes.`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #333; background-color: #0d0d0d; color: #fff; border-radius: 8px;">
-              <h2 style="color: #6200ea; text-align: center;">QRGen Authentication</h2>
-              <p>Hello,</p>
-              <p>You requested an OTP to login to your QRGen Account. Use the verification code below:</p>
-              <div style="background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 6px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #00e676; margin: 20px 0; border: 1px solid #333;">
-                ${otp}
-              </div>
-              <p style="font-size: 12px; color: #888; text-align: center;">This code will expire in 5 minutes. If you did not request this, please ignore this email.</p>
-            </div>
-          `
-        };
+    const isProd = process.env.NODE_ENV === 'production';
 
-        await transporter.sendMail(mailOptions);
-        return res.status(200).json({ message: 'OTP sent successfully to email.' });
-      } catch (mailError) {
-        console.error('Nodemailer Error: ', mailError);
-        return res.status(200).json({ 
-          message: 'OTP generated. (SMTP sending failed, check server console for OTP)', 
-          devOtp: otp 
-        });
-      }
-    } else {
-      return res.status(200).json({ 
-        message: 'OTP generated (SMTP credentials not configured, check server console)', 
-        devOtp: otp 
-      });
+    // Try sending email via Gmail SMTP (asynchronously in background)
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+      const transporter = createTransporter();
+      const mailOptions = {
+        from: `"QRGen Visiting Cards" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: 'Your QRGen Authentication OTP Code',
+        text: `Your OTP code is ${otp}. It will expire in 5 minutes.`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #333; background-color: #0d0d0d; color: #fff; border-radius: 8px;">
+            <h2 style="color: #6200ea; text-align: center;">QRGen Authentication</h2>
+            <p>Hello,</p>
+            <p>You requested an OTP to login to your QRGen Account. Use the verification code below:</p>
+            <div style="background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 6px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #00e676; margin: 20px 0; border: 1px solid #333;">
+              ${otp}
+            </div>
+            <p style="font-size: 12px; color: #888; text-align: center;">This code will expire in 5 minutes. If you did not request this, please ignore this email.</p>
+          </div>
+        `
+      };
+
+      transporter.sendMail(mailOptions)
+        .then(() => console.log(`[SMTP] OTP email sent successfully to ${email}`))
+        .catch((mailError) => console.error('[SMTP] Nodemailer Error: ', mailError));
     }
+
+    return res.status(200).json({ 
+      message: 'OTP verification code generated and sent.', 
+      devOtp: (isProd || (!process.env.EMAIL_USER || !process.env.EMAIL_PASS)) ? undefined : otp
+    });
 
   } catch (error) {
     console.error(error);
