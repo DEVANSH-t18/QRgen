@@ -2,7 +2,7 @@ services:
   # Backend Web Service Configuration
   - type: web
     name: qrgen-backend
-    env: node
+    runtime: node
     plan: free
     buildCommand: cd server && npm install
     startCommand: cd server && node server.js
@@ -18,10 +18,10 @@ services:
       - key: NODE_ENV
         value: production
 
-  # Frontend Static Site Configuration
-  - type: static
+  # Frontend Static Site Configuration (Defined as type: web + runtime: static)
+  - type: web
     name: qrgen-frontend
-    env: static
+    runtime: static
     plan: free
     buildCommand: cd client && npm install && npm run build
     publishPath: client/dist
