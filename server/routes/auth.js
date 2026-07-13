@@ -20,11 +20,11 @@ const getGmailIp = () => {
 
 const createTransporter = async () => {
   const gmailIp = await getGmailIp();
-  console.log(`[SMTP] Connecting via resolved IPv4 host: ${gmailIp}`);
+  console.log(`[SMTP] Connecting via resolved IPv4 host: ${gmailIp} on port 587`);
   return nodemailer.createTransport({
     host: gmailIp,
-    port: 465,
-    secure: true,
+    port: 587,
+    secure: false, // Must be false for port 587 (upgrades via STARTTLS)
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
