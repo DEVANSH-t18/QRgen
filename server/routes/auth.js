@@ -5,9 +5,24 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const User = require('../models/User');
 
-const createTransporter = () => {
+// Dynamically resolve smtp.gmail.com to IPv4 address to prevent ENETUNREACH IPv6 failures on Render
+const getGmailIp = () => {
+  return new Promise((resolve) => {
+    dns.lookup('smtp.gmail.com', { family: 4 }, (err, address) => {
+      if (err) {
+        console.warn('[SMTP] DNS lookup for smtp.gmail.com failed, using fallback IP.');
+        return resolve('192.178.158.108'); // Direct fallback IP
+      }
+      resolve(address);
+    });
+  });
+};
+
+const createTransporter = async () => {
+  const gmailIp = await getGmailIp();
+  console.log(`[SMTP] Connecting via resolved IPv4 host: ${gmailIp}`);
   return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
+    host: gmailIp,
     port: 465,
     secure: true,
     auth: {
@@ -15,10 +30,8 @@ const createTransporter = () => {
       pass: process.env.EMAIL_PASS
     },
     tls: {
+      servername: 'smtp.gmail.com',
       rejectUnauthorized: false
-    },
-    lookup: (hostname, options, callback) => {
-      dns.lookup(hostname, { family: 4 }, callback);
     },
     connectionTimeout: 10000, // 10 seconds
     greetingTimeout: 10000,
@@ -57,7 +70,6 @@ router.post('/send-otp', async (req, res) => {
 
     // Try sending email via Gmail SMTP (asynchronously in background)
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-      const transporter = createTransporter();
       const mailOptions = {
         from: `"QRGen Visiting Cards" <${process.env.EMAIL_USER}>`,
         to: email,
@@ -76,7 +88,8 @@ router.post('/send-otp', async (req, res) => {
         `
       };
 
-      transporter.sendMail(mailOptions)
+      createTransporter()
+        .then((transporter) => transporter.sendMail(mailOptions))
         .then(() => console.log(`[SMTP] OTP email sent successfully to ${email}`))
         .catch((mailError) => console.error('[SMTP] Nodemailer Error: ', mailError));
     }
