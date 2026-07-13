@@ -1,6 +1,11 @@
 import axios from 'axios';
 
 let apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+if (apiURL && !/^https?:\/\//i.test(apiURL)) {
+  apiURL = `https://${apiURL}`;
+}
+
 if (apiURL && !apiURL.endsWith('/api') && !apiURL.endsWith('/api/')) {
   apiURL = apiURL.replace(/\/$/, '') + '/api';
 }
