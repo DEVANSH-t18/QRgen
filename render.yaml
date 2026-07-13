@@ -1,0 +1,37 @@
+services:
+  # Backend Web Service Configuration
+  - type: web
+    name: qrgen-backend
+    env: node
+    plan: free
+    buildCommand: cd server && npm install
+    startCommand: cd server && node server.js
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+
+  # Frontend Static Site Configuration
+  - type: static
+    name: qrgen-frontend
+    env: static
+    plan: free
+    buildCommand: cd client && npm install && npm run build
+    publishPath: client/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: qrgen-backend
+          property: host
