@@ -80,7 +80,10 @@ const Dashboard = () => {
     );
   }
 
-  const baseUrl = import.meta.env.VITE_BASE_URL || window.location.origin;
+  let baseUrl = import.meta.env.VITE_BASE_URL || window.location.origin;
+  if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1')) {
+    baseUrl = 'https://qrgen-frontend-llqo.onrender.com';
+  }
   const publicProfileLink = `${baseUrl}/p/${user?._id}`;
 
   return (
